@@ -1,9 +1,8 @@
 const express = require('express');
-const router = express.Router();
+const userRoutes = require('./userRoutes');
+// const eventRoutes = require('./eventRoutes'); // We'll implement this next
 
-// Import route modules
-// const userRoutes = require('./userRoutes');
-// const eventRoutes = require('./eventRoutes');
+const router = express.Router();
 
 // Welcome route
 router.get('/', (req, res) => {
@@ -11,7 +10,7 @@ router.get('/', (req, res) => {
 });
 
 // Use route modules
-// router.use('/users', userRoutes);
+router.use('/users', userRoutes);
 // router.use('/events', eventRoutes);
 
 module.exports = router;
