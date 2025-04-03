@@ -77,6 +77,7 @@ const getUserProfile = async (userId) => {
     location: user.location,
     preferredCategories: user.preferredCategories,
     preferredLanguage: user.preferredLanguage,
+    createdAt: user.createdAt,
   };
 };
 
@@ -104,6 +105,7 @@ const updateUserProfile = async (userId, updates) => {
     location: user.location,
     preferredCategories: user.preferredCategories,
     preferredLanguage: user.preferredLanguage,
+    updatedAt: user.updatedAt,
   };
 };
 
