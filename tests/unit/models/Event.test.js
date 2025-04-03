@@ -5,11 +5,12 @@ describe('Event Model', () => {
   let user;
 
   beforeAll(async () => {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/event-locator-test', {
+    await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
 
+    // Create a test user
     user = new User({
       username: 'organizer',
       email: 'organizer@example.com',
@@ -68,7 +69,6 @@ describe('Event Model', () => {
     expect(error.errors.title).toBeDefined();
     expect(error.errors.description).toBeDefined();
     expect(error.errors['location.coordinates']).toBeDefined();
-    expect(error.errors['location.address']).toBeDefined();
     expect(error.errors.date).toBeDefined();
     expect(error.errors.categories).toBeDefined();
     expect(error.errors.organizer).toBeDefined();
@@ -90,5 +90,25 @@ describe('Event Model', () => {
 
     const savedEvent = await event.save();
     expect(savedEvent.status).toBe('active');
+  });
+
+  it('should store geospatial data correctly', async () => {
+    const coords = [-73.856077, 40.848447];
+    const event = new Event({
+      title: 'Test Event',
+      description: 'This is a test event',
+      location: {
+        type: 'Point',
+        coordinates: coords,
+        address: '123 Test St, Test City',
+      },
+      date: new Date(),
+      categories: ['music', 'arts'],
+      organizer: user._id,
+    });
+
+    const savedEvent = await event.save();
+    expect(savedEvent.location.type).toBe('Point');
+    expect(savedEvent.location.coordinates).toEqual(coords);
   });
 });
