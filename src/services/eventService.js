@@ -100,7 +100,7 @@ const deleteEvent = async (eventId, userId) => {
   }
   
   // Delete event
-  await event.remove();
+  await Event.deleteOne({ _id: eventId });
   
   return { message: 'Event deleted successfully' };
 };

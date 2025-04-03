@@ -1,4 +1,4 @@
-const { notificationService } = require('../services');
+const notificationService = require('../services/notificationService');
 
 // Queue notification for an event
 const queueEventNotification = async (req, res) => {

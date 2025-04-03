@@ -3,23 +3,31 @@ const { promisify } = require('util');
 const { User, Event } = require('../models');
 
 // Create Redis client
-const redisClient = redis.createClient({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD || '',
-});
+let redisClient;
+try {
+  redisClient = redis.createClient({
+    url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`,
+    password: process.env.REDIS_PASSWORD || '',
+  });
 
-// Promisify Redis methods
-const publishAsync = promisify(redisClient.publish).bind(redisClient);
+  redisClient.on('error', (error) => {
+    console.error('Redis error:', error);
+  });
 
-// Handle Redis errors
-redisClient.on('error', (error) => {
-  console.error('Redis error:', error);
-});
+  redisClient.connect().catch(console.error);
+} catch (error) {
+  console.error('Redis connection error:', error);
+}
 
 // Queue notification for an upcoming event
 const queueEventNotification = async (eventId, delayInMinutes = 0) => {
   try {
+    // Check if Redis is connected
+    if (!redisClient || !redisClient.isOpen) {
+      console.warn('Redis not connected. Using console for notifications.');
+      return await simulateNotification(eventId, delayInMinutes);
+    }
+
     // Get event details
     const event = await Event.findById(eventId).populate('organizer', 'name');
     
@@ -44,14 +52,17 @@ const queueEventNotification = async (eventId, delayInMinutes = 0) => {
     
     // Prepare notification data
     const notificationData = {
-      eventId: event._id,
+      eventId: event._id.toString(),
       title: event.title,
       description: event.description,
-      location: event.location,
+      location: {
+        coordinates: event.location.coordinates,
+        address: event.location.address
+      },
       date: event.date,
       organizer: event.organizer.name,
       recipients: interestedUsers.map(user => ({
-        userId: user._id,
+        userId: user._id.toString(),
         preferredLanguage: user.preferredLanguage,
       })),
       createdAt: new Date(),
@@ -61,7 +72,7 @@ const queueEventNotification = async (eventId, delayInMinutes = 0) => {
     };
     
     // Publish to Redis channel
-    await publishAsync('event-notifications', JSON.stringify(notificationData));
+    await redisClient.publish('event-notifications', JSON.stringify(notificationData));
     
     return {
       message: 'Notification queued successfully',
@@ -69,6 +80,38 @@ const queueEventNotification = async (eventId, delayInMinutes = 0) => {
     };
   } catch (error) {
     console.error('Queue notification error:', error);
+    throw error;
+  }
+};
+
+// Simulate notification if Redis is not available
+const simulateNotification = async (eventId, delayInMinutes = 0) => {
+  try {
+    // Get event details
+    const event = await Event.findById(eventId).populate('organizer', 'name');
+    
+    if (!event) {
+      throw new Error('Event not found');
+    }
+    
+    // Find users who might be interested in this event
+    const interestedUsers = await User.find({
+      preferredCategories: { $in: event.categories },
+    });
+    
+    console.log('====== SIMULATED NOTIFICATION ======');
+    console.log(`Event: ${event.title}`);
+    console.log(`Date: ${event.date}`);
+    console.log(`Organizer: ${event.organizer.name}`);
+    console.log(`Recipients: ${interestedUsers.length} users`);
+    console.log('===================================');
+    
+    return {
+      message: 'Notification simulated successfully (Redis not available)',
+      recipients: interestedUsers.length,
+    };
+  } catch (error) {
+    console.error('Simulate notification error:', error);
     throw error;
   }
 };

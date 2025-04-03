@@ -27,6 +27,9 @@ router.post(
 // Get all events with filtering and pagination
 router.get('/', eventController.getEvents);
 
+// Search events by location
+router.get('/search/location', eventController.searchEventsByLocation);
+
 // Get event by ID
 router.get('/:id', eventController.getEventById);
 
@@ -53,8 +56,5 @@ router.put(
 
 // Delete event
 router.delete('/:id', auth, eventController.deleteEvent);
-
-// Search events by location
-router.get('/search/location', eventController.searchEventsByLocation);
 
 module.exports = router;

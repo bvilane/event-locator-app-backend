@@ -1,18 +1,41 @@
 const redis = require('redis');
-const { promisify } = require('util');
 require('dotenv').config();
 
 // Create Redis client
-const subscriber = redis.createClient({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD || '',
-});
+let subscriber;
+try {
+  subscriber = redis.createClient({
+    url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`,
+    password: process.env.REDIS_PASSWORD || '',
+  });
 
-// Handle Redis errors
-subscriber.on('error', (error) => {
-  console.error('Redis subscriber error:', error);
-});
+  // Handle Redis errors
+  subscriber.on('error', (error) => {
+    console.error('Redis subscriber error:', error);
+  });
+  
+  const main = async () => {
+    await subscriber.connect();
+    
+    // Subscribe to the notification channel
+    await subscriber.subscribe('event-notifications', (message) => {
+      console.log('Received notification message');
+      const result = processNotification(message);
+      
+      if (result.success) {
+        console.log(`Successfully processed notification and sent ${result.messageCount} messages`);
+      } else {
+        console.error(`Failed to process notification: ${result.error}`);
+      }
+    });
+    
+    console.log('Notification worker is running and waiting for messages...');
+  };
+
+  main().catch(console.error);
+} catch (error) {
+  console.error('Redis connection error:', error);
+}
 
 // Process notifications
 const processNotification = (notification) => {
@@ -49,18 +72,9 @@ const processNotification = (notification) => {
   }
 };
 
-// Subscribe to the notification channel
-subscriber.subscribe('event-notifications');
-
-subscriber.on('message', (channel, message) => {
-  console.log(`Received message from channel: ${channel}`);
-  const result = processNotification(message);
-  
-  if (result.success) {
-    console.log(`Successfully processed notification and sent ${result.messageCount} messages`);
-  } else {
-    console.error(`Failed to process notification: ${result.error}`);
+process.on('SIGINT', async () => {
+  if (subscriber) {
+    await subscriber.quit();
   }
+  process.exit(0);
 });
-
-console.log('Notification worker is running and waiting for messages...');
