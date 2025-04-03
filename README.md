@@ -152,4 +152,8 @@ The application uses Redis for a message queue system that handles notifications
 
 ## License
 
-ISC
+MIT
+
+## Author
+
+Bavukile Birthwell Vilane - b.vilane@alustudent.com - https://github.com/bvilane
