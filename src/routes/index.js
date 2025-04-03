@@ -1,6 +1,6 @@
 const express = require('express');
 const userRoutes = require('./userRoutes');
-// const eventRoutes = require('./eventRoutes'); // We'll implement this next
+const eventRoutes = require('./eventRoutes');
 
 const router = express.Router();
 
@@ -11,6 +11,6 @@ router.get('/', (req, res) => {
 
 // Use route modules
 router.use('/users', userRoutes);
-// router.use('/events', eventRoutes);
+router.use('/events', eventRoutes);
 
 module.exports = router;
