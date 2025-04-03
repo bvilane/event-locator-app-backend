@@ -107,43 +107,42 @@ const deleteEvent = async (eventId, userId) => {
 
 // Search events by location
 const searchEventsByLocation = async (longitude, latitude, radius = 10, options = {}) => {
-  const { page = 1, limit = 10, category } = options;
-  
-  // Build filter
-  const filter = {
-    location: {
-      $near: {
-        $geometry: {
-          type: 'Point',
-          coordinates: [parseFloat(longitude), parseFloat(latitude)],
-        },
-        $maxDistance: parseInt(radius) * 1000, // Convert km to meters
-      },
-    },
+    const { page = 1, limit = 10, category } = options;
+    
+    // Build filter
+    const filter = {
+      location: {
+        $geoWithin: {
+          $centerSphere: [
+            [parseFloat(longitude), parseFloat(latitude)],
+            parseInt(radius) / 6371 // Convert km to radians (6371 is Earth's radius in km)
+          ]
+        }
+      }
+    };
+    
+    // Add category filter
+    if (category) {
+      filter.categories = { $in: Array.isArray(category) ? category : [category] };
+    }
+    
+    // Execute query with pagination
+    const events = await Event.find(filter)
+      .populate('organizer', 'name username')
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit))
+      .sort({ date: 1 });
+    
+    // Get total count
+    const total = await Event.countDocuments(filter);
+    
+    return {
+      events,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total,
+    };
   };
-  
-  // Add category filter
-  if (category) {
-    filter.categories = { $in: Array.isArray(category) ? category : [category] };
-  }
-  
-  // Execute query with pagination
-  const events = await Event.find(filter)
-    .populate('organizer', 'name username')
-    .skip((page - 1) * limit)
-    .limit(parseInt(limit))
-    .sort({ date: 1 });
-  
-  // Get total count
-  const total = await Event.countDocuments(filter);
-  
-  return {
-    events,
-    totalPages: Math.ceil(total / limit),
-    currentPage: page,
-    total,
-  };
-};
 
 module.exports = {
   createEvent,

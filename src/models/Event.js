@@ -20,6 +20,7 @@ const eventSchema = new mongoose.Schema(
       coordinates: {
         type: [Number], // [longitude, latitude]
         required: true,
+        index: '2dsphere' // Add index directly on coordinates
       },
       address: {
         type: String,
@@ -65,8 +66,8 @@ const eventSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Create geospatial index on location
-eventSchema.index({ location: '2dsphere' });
+// Create geospatial index on location.coordinates
+eventSchema.index({ 'location.coordinates': '2dsphere' });
 
 // Add text index for searching
 eventSchema.index({ title: 'text', description: 'text' });
